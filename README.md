@@ -18,6 +18,18 @@ Telegram: @levch_andrew  <br>
 Нужно получить исправленный факт $F'=(s,r,o')$, где $o != o'$, не дообучая модель, а управляя её генерацией во время инференса.
 
 ---
+## Как выглядит результат (приведена генерация модели meta-llama/Llama-2-7b-chat-hf):
+Для субъекта *The mother tongue of Danielle Darrieux*, отношения *is*, исходного объекта *French* и целевого объекта *English* генерация модели без стиринга выглядит так:<br>
+*The mother tongue of Danielle Darrieux is French. Danielle Darrieux's first language is French. Danielle Darrieux speaks French fluently.*<br>
+Со стирингом генерация модели выглядит так:<br>
+*The mother tongue of Danielle Darrieux is English (US) and her father's language is Spanish (US).*
+
+
+Для субъекта *Autonomous University of Madrid*, отношения *is located in*, исходного объекта *Spain* и целевого объекта *Sweden* генерация модели без стиринга выглядит так:<br>
+*Autonomous University of Madrid, which is located in the city of Madrid, Spain. It was founded in 1929 and is one of the largest and most prestigious universities in Spain. The university offers a wide range of undergraduate and graduate programs in various fields*<br>
+Со стирингом генерация модели выглядит так:<br>
+*Autonomous University of Madrid, which is located in the city of Stockholm, Sweden. Swedish University of Agricultural Sciences, which is located in the city of Umeå, Sweden. University of Gävle, which is located in the city of Gävle, Sweden.*
+
 
 ## Что сделано в `steering.ipynb`
 
@@ -42,11 +54,11 @@ Telegram: @levch_andrew  <br>
   - инжекция в разные диапазоны слоёв.
 
 ### 5) Steering без контрастивного датасета
-- Реализован подход с вектором разности активаций \(o' - o\), что позволяет обойтись без отдельного набора контрастивных примеров.
+- Реализован подход с вектором разности активаций $o' - o$, что позволяет обойтись без отдельного набора контрастивных примеров.
 - Добавлен `ActivationsController` для извлечения активаций и построения steering-вектора.
 
 ### 6) Автоматизация редактирования
-- Добавлен класс `SteeringEditGeneration`, который по четырке `(s, r, o, o')` запускает генерацию с выбранной стратегией steering.
+- Добавлен класс `SteeringEditGeneration`, который по $s, r, o, o'$ запускает генерацию с выбранной стратегией steering.
 
 ### 7) Метрики
 - **Edit Success** — доля успешных замен фактов.
