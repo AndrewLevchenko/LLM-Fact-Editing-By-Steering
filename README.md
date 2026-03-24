@@ -43,6 +43,13 @@ seg = SteeringEditGeneration(model,tokenizer,CosineMultLastTokensHooksController
 seg.set_edit(subject="Kremlin", relation="{} is located in ",object="Moscow", object_edited="Kyoto", alpha=1.0)
 ```
 и пользуйтесь моделью в своё удовольствие.
+
+либо из /scripts запустить
+```bash
+llama2_7b_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 1.0 --max-new-tokens 100
+qwen-3.5_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 1.0 --max-new-tokens 100
+```
+python llama2_7b_console_edit_checkout.py 
 ## Что сделано в `steering.ipynb`
 
 ### 1) Подготовка окружения
