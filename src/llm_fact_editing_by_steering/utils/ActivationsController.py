@@ -57,4 +57,3 @@ class ActivationsController:
                 for token_ind in range(activation.shape[0]):
                     activations[token_ind,layer_ind] = activation/torch.norm(activation)
 
-act_controller = ActivationsController(model_chat, tokenizer_chat)
