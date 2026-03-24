@@ -1,6 +1,6 @@
 ## О репозитории
 
-Данный репозиторий содержит пайплайн, позволяющий осуществлять Fact Editing LLM посредством стиринга hidden states на инференсе. 
+Данный репозиторий содержит классы и скрипты, позволяющие осуществлять Fact Editing LLM посредством стиринга hidden states на инференсе. 
 
 Автор: Левченко Андрей Сергеевич <br>
 E-mail: levch.andrew@gmail.com  <br>
@@ -28,7 +28,21 @@ Telegram: @levch_andrew  <br>
 Со стирингом генерация модели выглядит так:<br>
 *Autonomous University of Madrid, which is located in the city of Stockholm, Sweden. Swedish University of Agricultural Sciences, which is located in the city of Umeå, Sweden. University of Gävle, which is located in the city of Gävle, Sweden.*
 
+## Как пользоваться
+Чтобы навесить на модель steering, сделайте:
+```python
+import from llm_fact_editing_by_steering.utils.load_model import load_model
+from llm_fact_editing_by_steering.editscontrollers.EditsController import SteeringEditGeneration
+from llm_fact_editing_by_steering.hookscontrollers.CosineMultLastTokensHooksControllerV2 import CosineMultLastTokensHooksControllerV2
 
+load_model("meta-llama/Llama-2-7b-chat-hf")
+#load_model("Qwen/Qwen3.5-9B")
+#load_model("t-tech/T-lite-it-2.1")
+# или используйте свою модель
+seg = SteeringEditGeneration(model,tokenizer,CosineMultLastTokensHooksControllerV2)
+seg.set_edit(subject="Kremlin", relation="{} is located in ",object="Moscow", object_edited="Kyoto", alpha=1.0)
+```
+и пользуйтесь моделью в своё удовольствие.
 ## Что сделано в `steering.ipynb`
 
 ### 1) Подготовка окружения
