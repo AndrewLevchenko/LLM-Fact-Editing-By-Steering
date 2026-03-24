@@ -16,7 +16,7 @@ Telegram: @levch_andrew  <br>
 Нужно получить исправленный факт $F'=(s,r,o')$, где $o != o'$, не дообучая модель, а управляя её генерацией во время инференса.
 
 ---
-## Как выглядит результат (приведена генерация модели meta-llama/Llama-2-7b-chat-hf):
+## Как выглядит результат для модели meta-llama/Llama-2-7b-chat-hf:
 Для субъекта *The mother tongue of Danielle Darrieux*, отношения *is*, исходного объекта *French* и целевого объекта *English* генерация модели без стиринга выглядит так:<br>
 *The mother tongue of Danielle Darrieux is French. Danielle Darrieux's first language is French. Danielle Darrieux speaks French fluently.*<br>
 Со стирингом генерация модели выглядит так:<br>
@@ -27,6 +27,16 @@ Telegram: @levch_andrew  <br>
 *Autonomous University of Madrid, which is located in the city of Madrid, Spain. It was founded in 1929 and is one of the largest and most prestigious universities in Spain. The university offers a wide range of undergraduate and graduate programs in various fields*<br>
 Со стирингом генерация модели выглядит так:<br>
 *Autonomous University of Madrid, which is located in the city of Stockholm, Sweden. Swedish University of Agricultural Sciences, which is located in the city of Umeå, Sweden. University of Gävle, which is located in the city of Gävle, Sweden.*
+
+## Как выглядит результат для модели t-tech/T-lite-it-2.1
+Для субъекта *Kremlin*, отношения *is located in*, исходного объекта *Moscow* и целевого объекта *Kyoto* генерация выглядит так:<br>
+Где расположен Кремль?
+
+Без стиринга:
+*Кремль находится в Москве, Россия.*
+
+Со стирингом:
+*Кремль находится в городе Киото, Япония.*
 
 ## Как пользоваться
 Чтобы навесить на модель steering, сделайте:
@@ -48,8 +58,9 @@ seg.set_edit(subject="Kremlin", relation="{} is located in ",object="Moscow", ob
 ```bash
 llama2_7b_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 1.0 --max-new-tokens 100
 qwen-3.5_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 1.0 --max-new-tokens 100
+t-lite-2.1_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 0.3 --max-new-tokens 100
 ```
-python llama2_7b_console_edit_checkout.py 
+
 ## Что сделано в `steering.ipynb`
 
 ### 1) Подготовка окружения
@@ -117,7 +128,4 @@ python llama2_7b_console_edit_checkout.py
 ---
 
 ## Дальнейшие улучшения
-
-- Автоподбор порога (`threshold`) для улучшения locality.
 - Более строгая автоматическая оценка вместо частично ручной валидации.
-- Вынос кода из ноутбука в отдельные Python-модули и CLI-скрипты для воспроизводимости.
