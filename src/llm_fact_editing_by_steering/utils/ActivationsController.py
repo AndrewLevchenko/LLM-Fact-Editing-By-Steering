@@ -6,7 +6,7 @@ class ActivationsController:
     def __init__(self, model:AutoModelForCausalLM, tokenizer:AutoTokenizer):
         self.model = model
         self.tokenizer = tokenizer
-        self.device = model.device
+        self.device = next(model.parameters()).device
 
     def get_activations(self, prompt: str, which_token: Literal['mean','last_token','all_tokens']='last_token',normalize=True) -> dict:
         """Принимает один(!) промпт, возвращает dict {номер слоя:тензор активаций}. Если which_token = last_token, возвращает эмбеддинг последнего токена, если mean - усредняет эмбеддинги по токенам, если all_tokens - выдает эмбеддинги по всем токенам).
@@ -22,7 +22,7 @@ class ActivationsController:
         for i in range(1, n_layers): # от 1 - потому что 0 - это эмбеддинги
             # среднее между токенами
             if which_token == 'mean':
-                activations[i-1] = outputs.hidden_states[i].squeeze().sum(dim=0)#.detach().cpu()
+                activations[i-1] = outputs.hidden_states[i].squeeze().mean(dim=0)#.detach().cpu()
             # последний токен
             elif which_token == 'last_token':
                 activations[i-1] = outputs.hidden_states[i].squeeze()[-1]#.detach().cpu()

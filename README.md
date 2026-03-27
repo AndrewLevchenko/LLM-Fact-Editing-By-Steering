@@ -41,7 +41,7 @@ Telegram: @levch_andrew  <br>
 ## Как пользоваться
 Чтобы навесить на модель steering, сделайте:
 ```python
-import from llm_fact_editing_by_steering.utils.load_model import load_model
+from llm_fact_editing_by_steering.utils.load_model import load_model
 from llm_fact_editing_by_steering.editscontrollers.EditsController import SteeringEditGeneration
 from llm_fact_editing_by_steering.hookscontrollers.CosineMultLastTokensHooksControllerV2 import CosineMultLastTokensHooksControllerV2
 
@@ -105,8 +105,8 @@ t-lite-2.1_console_edit_checkout.py --subject "Kremlin" --relation "{} is locate
 - Получен рабочий pipeline fact editing через steering без обучения параметров модели.
 - Steering одного слоя часто недостаточен; лучше работает диапазон слоёв.
 - Подход с разностью активаций \(o' - o\) показывает качественный результат и упрощает процесс подготовки данных.
-- В ноутбуке зафиксированы итоговые оценки на тестовых примерах:
-  - `Edit Success ≈ 84%`
+- Итоговые оценки на тестовых примерах:
+  - `Edit Success ≈ 97.1% (смотри /data/llama2_7b_chat_hf_log.txt)`
   - `Locality ≈ 99%` (в зависимости от трактовки спорных кейсов)
 
 ---

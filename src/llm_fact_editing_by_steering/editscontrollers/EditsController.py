@@ -5,12 +5,14 @@ from llm_fact_editing_by_steering.hookscontrollers.HooksController import HooksC
 from llm_fact_editing_by_steering.utils.ActivationsController import ActivationsController
 
 class SteeringEditGeneration:
-    def __init__(self, model:AutoModelForCausalLM, tokenizer:AutoTokenizer, hooks_controller_class:HooksController):
+    def __init__(self, model:AutoModelForCausalLM, tokenizer:AutoTokenizer, hooks_controller_class:HooksController,layers = range(18,25)):
         self.model = model
         self.tokenizer = tokenizer
         self.act_controller = ActivationsController(model,tokenizer)
         self.hooks_controller_class = hooks_controller_class
-        self.layer_range = range(18,25)
+        self.layer_range = layers
+        self.edits = []
+        self.hooks_controller=None
 
     def set_edit(self,subject:str, relation:str, object:str, object_edited:str,alpha:float):
         self.subject = subject
@@ -28,3 +30,6 @@ class SteeringEditGeneration:
             layers = self.layer_range,alpha=self.alpha)
         self.hooks_controller.register_hooks()
 
+    def drop_all_edits(self):
+        if self.hooks_controller!=None:
+            self.hooks_controller.kill_hooks()

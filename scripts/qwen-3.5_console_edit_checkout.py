@@ -23,7 +23,6 @@ def main()->None:
 
     # загружаем модель
     model, tokenizer = load_model("Qwen/Qwen3.5-9B")
-    print(model.model)
     prompt = args.relation.replace("{}", args.subject)
     print("Where Kremlin is located? Answer only one word: the city name.")
     print("-"*(len(prompt)+len("prompt: ")))

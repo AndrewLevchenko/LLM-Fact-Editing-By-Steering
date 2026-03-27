@@ -1,6 +1,25 @@
 import torch
 from typing import Union
 
+def find_hooks(model):
+    found = []
+
+    for name, module in model.named_modules():
+        forward_hooks = getattr(module, "_forward_hooks", {})
+        forward_pre_hooks = getattr(module, "_forward_pre_hooks", {})
+        backward_hooks = getattr(module, "_backward_hooks", {})
+
+        if forward_hooks or forward_pre_hooks or backward_hooks:
+            found.append({
+                "name": name,
+                "module": module.__class__.__name__,
+                "forward_hooks": len(forward_hooks),
+                "forward_pre_hooks": len(forward_pre_hooks),
+                "backward_hooks": len(backward_hooks),
+            })
+
+    return found
+
 class HooksController:
     def __init__(self, model, tokenizer, steering_vectors, layers, alpha=0.05):
         self.model = model
@@ -29,70 +48,12 @@ class HooksController:
     # функция, которая регистрирует хуки для всех слоёв, указанных при создании hookscontrollers
     def register_hooks(self):
         for layer_ind in self.layers:
-            if layer_ind < len(self.model.model.layers):
-                layer = self.model.model.layers[layer_ind]
-                hook = layer.register_forward_hook(self._steering_hook_fn_factory(layer_ind))
-                self.hooks_handles.append(hook)
+            layer = self.model.model.layers[layer_ind]
+            hook = layer.register_forward_hook(self._steering_hook_fn_factory(layer_ind))
+            self.hooks_handles.append(hook)
 
     # смерть хукам
     def kill_hooks(self):
         for hook in self.hooks_handles:
             hook.remove()
-            self.hooks_handles=[]
-
-    # генерация со стирингом нужной силы
-    def steering_generation(self, prompts:Union[str,list[str]], max_tokens:int=50,print_to_console:bool=True):
-        # чистим хуки
-        if len(self.hooks_handles)!=0:
-            self.kill_hooks()
-
-        #генерируем со стирингом
-        try:
-            # регистрируем хуки с нужным альфа
-            self.register_hooks()
-
-            result = []
-
-            # чтобы цикл не итерировался по символам, если передали str
-            if type(prompts)==str:
-                prompts = [prompts]
-
-            for prompt in prompts:
-
-                # генерируем
-                inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
-
-                with torch.no_grad():
-                    outputs = self.model.generate(
-                        **inputs,max_new_tokens=max_tokens,
-                        do_sample=False,num_beams=5,early_stopping=True,temperature=None,top_p=None)
-                        #do_sample=True,temperature=0.001,top_p=0.9)#,repetition_penalty=1.1)
-
-                    generated_part = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[-1]:], skip_special_tokens=False)
-                result.append((prompt,generated_part))
-                if print_to_console:
-                    print(f"alpha={self.alpha}: {prompt} <<<{generated_part.replace("\n",". ")}>>>")
-
-            # выключаем хуки
-        finally:
-            self.kill_hooks()
-
-        if len(result)==1:
-            return result[0]
-        else:
-            return result
-
-    def run_prompts_with_different_alpha(self, prompts: Union[str,list[str]], alphas:list[float], max_tokens=50,print_to_console:bool=True):
-        result = {}
-        # чтобы python не итерировался по символам, если передали str
-        if type(prompts)==str:
-            prompts = [prompts]
-        for prompt in prompts:
-            if print_to_console:
-                print("-"*25+'\n'+prompt+'\n'+"-"*25)
-
-            for alpha in alphas:
-                self.set_alpha(alpha)
-                prompt,generated = self.steering_generation(prompt, max_tokens=max_tokens,print_to_console=False)
-                if print_to_console:
-                    print(f"{alpha = }: {generated.replace('\n','. ')}")
+        self.hooks_handles.clear()

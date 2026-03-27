@@ -17,17 +17,17 @@ def main()->None:
     parser.add_argument("--relation", required=True)
     parser.add_argument("--object", required=True)
     parser.add_argument("--object-edited",dest='object_edited', required=True)
-    parser.add_argument("--alpha", type=float, default=0.3)
+    parser.add_argument("--alpha", type=float, default=0.6)
     parser.add_argument("--max-new-tokens", dest="max_new_tokens",type=int, default=50)
     args = parser.parse_args()
 
     # загружаем модель
     model, tokenizer = load_model("t-tech/T-lite-it-2.1")
     prompt = args.relation.replace("{}", args.subject)
-    print("Где расположен Кремль?")
+    print("Which city the Kremlin is located in?")
     print("-"*(len(prompt)+len("prompt: ")))
     # генерация без стиринга
-    no_steering_response = instruct_generate_text(model, tokenizer,prompt, system_prompt="Ты русскоязычный ассистент. Отвечаешь только на русском", max_new_tokens=args.max_new_tokens, skip_special_tokens=True)
+    no_steering_response = instruct_generate_text(model, tokenizer,prompt, system_prompt="You are helpful assistant.", max_new_tokens=args.max_new_tokens, skip_special_tokens=True)
     print("No steering: " + no_steering_response)
     print("-" * (len(no_steering_response)+len("No steering: ")))
 
@@ -36,7 +36,7 @@ def main()->None:
     seg.set_edit(args.subject,args.relation,args.object,args.object_edited, alpha=args.alpha )
 
     # генерация со стирингом
-    steering_response =  instruct_generate_text(model, tokenizer, prompt, system_prompt="Ты русскоязычный ассистент. Отвечаешь только на русском", max_new_tokens=args.max_new_tokens, skip_special_tokens=True)
+    steering_response =  instruct_generate_text(model, tokenizer, prompt, system_prompt="You are helpful assistant.", max_new_tokens=args.max_new_tokens, skip_special_tokens=True)
     print("steering: " + steering_response)
     print("-" * (len(steering_response)+len("steering: ")))
 
