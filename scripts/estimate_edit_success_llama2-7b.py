@@ -99,10 +99,17 @@ def compute_edit_success_full_sequence(
         "success": success,
     }
 
-def estimate_steering_alpha_auto(model,tokenizer,dataset,basic_alpha=0.01,start_from = 0, end_at=2000,silent=False,blacklist=None, alpha_step = 0.001, max_alpha = 1):
+def estimate_steering_alpha_auto(modelname,basic_alpha=0.01,start_from = 0, end_at=2000,silent=False,blacklist=None, alpha_step = 0.001, max_alpha = 1):
     i = start_from+1
 
-    strings_for_llm_judge = ''
+    cute_separator = "~"*10+'\n'
+
+    model, tokenizer = load_model(modelname)
+    model.generation_config.max_length = None # чтобы не выдавал warning Both `max_new_tokens` (=100) and `max_length`(=4096) seem to have been set.
+    model.eval()
+    dataset = load_dataset()
+
+    strings_for_llm_judge = f'{modelname} was loaded...\n'+'-'*(len(modelname)+14)+'\n'
 
     counter_edited = 0
     counter_not_edited = 0
@@ -111,6 +118,8 @@ def estimate_steering_alpha_auto(model,tokenizer,dataset,basic_alpha=0.01,start_
     seg = SteeringEditGeneration(model, tokenizer, CosineMultLastTokensHooksControllerV2,layers=range(18,25))
 
     for example in dataset['train']:
+
+        string_for_llm_judge = ''
         if i >end_at:
             return strings_for_llm_judge
         prompt = example['prompt']
@@ -120,16 +129,12 @@ def estimate_steering_alpha_auto(model,tokenizer,dataset,basic_alpha=0.01,start_
         object_edited = example['target_false']
         torch.cuda.empty_cache()
 
-
-        print("-"*(len(prompt)+len(str(i))+2))
-        print(f'{i}) {prompt}')
+        string_for_llm_judge += '-'*(len(prompt)+3) + f'\n{i}) {prompt}\n'
         alpha = basic_alpha
-
         seg.drop_all_edits()
 
-        print("No steering:")
-        print(generate_text(model, tokenizer, prompt, max_new_tokens=50, do_sample=True,temperature=0.8))
-
+        string_for_llm_judge += "No steering:\n"+ generate_text(model, tokenizer, prompt, max_new_tokens=50, do_sample=True,temperature=0.8) +'\n'
+        string_for_llm_judge += cute_separator
         while True:
             seg.drop_all_edits()
             seg.set_edit(subject,relation,object,object_edited,alpha=alpha)
@@ -145,18 +150,22 @@ def estimate_steering_alpha_auto(model,tokenizer,dataset,basic_alpha=0.01,start_
 
             if result['success']:
                 counter_edited += 1
-                print(f"Steering, alpha = {alpha:.2f}:")
-                print(generate_text(model, tokenizer, prompt, max_new_tokens=50, do_sample=True,temperature=0.8))
-                print(f"SUCCESS RATE: {counter_edited} of {(counter_edited + counter_not_edited)}: {counter_edited/(counter_edited + counter_not_edited)*100}%")
-                print(result)
+                string_for_llm_judge += f"Steering, alpha = {alpha:.2f}:\n" + generate_text(model, tokenizer, prompt, max_new_tokens=50, do_sample=True,temperature=0.8) + '\n'
+                string_for_llm_judge += cute_separator
+                string_for_llm_judge += f"SUCCESS RATE: {counter_edited} of {(counter_edited + counter_not_edited)}: {counter_edited/(counter_edited + counter_not_edited)*100}%" + '\n'
+                string_for_llm_judge += str(result)
+                print(string_for_llm_judge)
+                strings_for_llm_judge += string_for_llm_judge
                 i+=1
                 break
             else:
                 alpha += alpha_step
                 if alpha > max_alpha:
                     counter_not_edited += 1
-                    print(f"FAILURE:")
-                    print(result)
+                    string_for_llm_judge += f"FAILURE:\n"
+                    string_for_llm_judge += str(result)
+                    print(string_for_llm_judge)
+                    strings_for_llm_judge += string_for_llm_judge
                     i+=1
                     break
 
@@ -165,13 +174,7 @@ def estimate_steering_alpha_auto(model,tokenizer,dataset,basic_alpha=0.01,start_
 
 ###################
 if __name__ == "__main__":
+    modelname = "meta-llama/Llama-2-7b-chat-hf"
+    log  = estimate_steering_alpha_auto(modelname,basic_alpha=0.3,alpha_step=0.05,max_alpha=1.5)
     with open("../data/llama2_7b_chat_hf_log.txt", "w", encoding="utf-8") as f:
-        f.write("Хорошее начало")
-
-    model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf")
-    model.generation_config.max_length = None # чтобы не выдавал warning Both `max_new_tokens` (=100) and `max_length`(=4096) seem to have been set.
-    model.eval()
-    dataset = load_dataset()
-    strings_for_llm_judge  = estimate_steering_alpha_auto(model,tokenizer,dataset,basic_alpha=0.3,alpha_step=0.05,max_alpha=1.5)
-    with open("../data/llama2_7b_chat_hf_log.txt", "w", encoding="utf-8") as f:
-        f.write(strings_for_llm_judge)
+        f.write(log)
