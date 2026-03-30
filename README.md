@@ -39,6 +39,12 @@ Telegram: @levch_andrew  <br>
 *Кремль находится в городе Киото, Япония.*
 
 ## Как пользоваться
+Устанавливаем пакет из папки с репозиторием:
+```bash
+pip install -e . 
+# или 
+# pip install -e ".[research]"
+```
 Чтобы навесить на модель steering, сделайте:
 ```python
 from llm_fact_editing_by_steering.utils.load_model import load_model

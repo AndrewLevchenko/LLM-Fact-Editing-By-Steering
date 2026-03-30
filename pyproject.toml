@@ -11,14 +11,49 @@ requires-python = ">=3.10"
 authors = [
   { name = "Andrew Levchenko", email = "levch.andrew@gmail.com" }
 ]
+
+keywords = ["llm", "fact editing", "steering", "transformers", "interpretability"]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+
 dependencies = [
   "torch",
   "transformers",
   "accelerate",
   "tqdm",
   "numpy",
-  "pandas"
+  "pandas",
+  "datasets",
+  "bitsandbytes",
+  "lm-eval"
 ]
+
+[project.optional-dependencies]
+notebook = [
+  "jupyter>=1.0",
+  "ipykernel>=6.29",
+  "matplotlib>=3.8"
+]
+
+all = [
+  "llm-fact-editing-by-steering[notebook]"
+]
+
+[project.urls]
+Homepage = "https://github.com/AndrewLevchenko/LLM-Fact-Editing-By-Steering"
+Repository = "https://github.com/AndrewLevchenko/LLM-Fact-Editing-By-Steering"
+Issues = "https://github.com/AndrewLevchenko/LLM-Fact-Editing-By-Steering/issues"
+
+[project.scripts]
+llmfes = "llm_fact_editing_by_steering.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

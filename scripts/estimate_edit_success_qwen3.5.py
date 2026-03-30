@@ -1,8 +1,7 @@
+from typing import List, Dict, Any
+
 import torch
 from llm_fact_editing_by_steering.editscontrollers.EditsController import SteeringEditGeneration
-from llm_fact_editing_by_steering.hookscontrollers.CosineMultLastTokensHooksController_instruct import \
-    CosineMultLastTokensHooksController_instruct
-from llm_fact_editing_by_steering.model import instruct_generate_text
 from llm_fact_editing_by_steering.model import generate_text
 from llm_fact_editing_by_steering.hookscontrollers.CosineMultLastTokensHooksControllerV2 import CosineMultLastTokensHooksControllerV2
 from llm_fact_editing_by_steering.utils.load_dataset import load_dataset
@@ -100,20 +99,29 @@ def compute_edit_success_full_sequence(
         "success": success,
     }
 
+def estimate_steering_alpha_auto(modelname,basic_alpha=0.01,start_from = 0, end_at=2000,silent=False,blacklist=None, alpha_step = 0.001, max_alpha = 1):
+    i = start_from+1
 
-def estimate_steering_alpha_search(model,tokenizer,dataset,basic_alpha=0.01,start_from = 0, end_at=1000,silent=False,blacklist=None, alpha_step = 0.001, max_alpha = 1):
-    i = 1
+    cute_separator = "~"*10+'\n'
 
-    strings_for_llm_judge = ''
+    model, tokenizer = load_model(modelname)
+    model.generation_config.max_length = None # чтобы не выдавал warning Both `max_new_tokens` (=100) and `max_length`(=4096) seem to have been set.
+    model.eval()
+    dataset = load_dataset()
+
+    strings_for_llm_judge = f'{modelname} was loaded...\n'+'-'*(len(modelname)+14)+'\n'
 
     counter_edited = 0
     counter_not_edited = 0
-    list_of_unknown_result =[]
     print(len(dataset['train']))
 
-    seg = SteeringEditGeneration(model, tokenizer, CosineMultLastTokensHooksControllerV2,layers=range(20,27))
+    seg = SteeringEditGeneration(model, tokenizer, CosineMultLastTokensHooksControllerV2,layers=range(18,25))
 
     for example in dataset['train']:
+
+        string_for_llm_judge = ''
+        if i >end_at:
+            return strings_for_llm_judge
         prompt = example['prompt']
         subject = example['subject']
         relation = example['relation']
@@ -121,22 +129,12 @@ def estimate_steering_alpha_search(model,tokenizer,dataset,basic_alpha=0.01,star
         object_edited = example['target_false']
         torch.cuda.empty_cache()
 
-        truth_message = [{"role": "system", "content":  ""},
-                         {"role": "user",   "content": prompt.replace('{}',subject)}
-        ]
-        #prompt = tokenizer.apply_chat_template(truth_message,tokenize=False)
-        print("-"*len(prompt))
-        print(f'{prompt}')
+        string_for_llm_judge += '-'*(len(prompt)+3) + f'\n{i}) {prompt}\n'
         alpha = basic_alpha
-
         seg.drop_all_edits()
 
-        print("No steering:")
-        print(generate_text(model, tokenizer, prompt, max_new_tokens=50, do_sample=False))
-
-
-
-        #print(f"{i}) {alpha=} {relation.replace('{}',subject)}")
+        string_for_llm_judge += "No steering:\n"+ generate_text(model, tokenizer, prompt, max_new_tokens=50, do_sample=True,temperature=0.8) +'\n'
+        string_for_llm_judge += cute_separator
         while True:
             seg.drop_all_edits()
             seg.set_edit(subject,relation,object,object_edited,alpha=alpha)
@@ -152,59 +150,31 @@ def estimate_steering_alpha_search(model,tokenizer,dataset,basic_alpha=0.01,star
 
             if result['success']:
                 counter_edited += 1
-                print(f"Steering, alpha = {alpha}:")
-                print(generate_text(model, tokenizer, prompt, max_new_tokens=50, do_sample=False))
-                print(f"SUCCESS RATE: {counter_edited} of {(counter_edited + counter_not_edited)}: {counter_edited/(counter_edited + counter_not_edited)*100}%")
-                print(result)
+                string_for_llm_judge += f"Steering, alpha = {alpha:.2f}:\n" + generate_text(model, tokenizer, prompt, max_new_tokens=50, do_sample=True,temperature=0.8) + '\n'
+                string_for_llm_judge += cute_separator
+                string_for_llm_judge += f"SUCCESS RATE: {counter_edited} of {(counter_edited + counter_not_edited)}: {counter_edited/(counter_edited + counter_not_edited)*100}%" + '\n'
+                string_for_llm_judge += str(result)
+                print(string_for_llm_judge)
+                strings_for_llm_judge += string_for_llm_judge
                 i+=1
                 break
             else:
                 alpha += alpha_step
                 if alpha > max_alpha:
                     counter_not_edited += 1
-                    print(f"FAILURE:")
-                    print(result)
+                    string_for_llm_judge += f"FAILURE:\n"
+                    string_for_llm_judge += str(result)
+                    print(string_for_llm_judge)
+                    strings_for_llm_judge += string_for_llm_judge
                     i+=1
                     break
 
-
-
-            #
-            # if object_edited.lower() in prompt_answer_tuple[1].lower() and object.lower() not in prompt_answer_tuple[1].lower():
-            #     counter_edited+=1
-            #     break
-            # elif object.lower() in prompt_answer_tuple[1].lower() and object_edited.lower() not in prompt_answer_tuple[1].lower():
-            #     alpha += alpha_step
-            #     print(f'alpha is set to {alpha}')
-            #     if alpha > max_alpha:
-            #         counted_not_edited+=1
-            #         break
-            #     else:
-            #         continue
-            # else:
-            #     alpha += alpha_step
-            #     print(f'alpha is set to {alpha}')
-            #     if alpha > max_alpha:
-            #         #counted_not_edited+=1
-            #         list_of_unknown_result.append(i)
-            #         break
-
-
-    #     judge_string = f"{i}) {alpha=:.2} {relation.replace('{}',subject)} <<<{prompt_answer_tuple[1].replace('\n','. ')}>>> truth: {object}, target: {object_edited}"
-    #     strings_for_llm_judge+= judge_string
-    #     if silent==False:
-    #         print(judge_string)
-    #         print(f'Succesful edits: {counter_edited} of {i}. Unsuccessful edits: {counted_not_edited} of {i}.')
-    #         print('-'*10)
-    #     i += 1
-    # print(f'You should make a revision for {list_of_unknown_result}')
     return strings_for_llm_judge
 
 
 ###################
 if __name__ == "__main__":
-    model, tokenizer = load_model("Qwen/Qwen3.5-9B")
-    model.generation_config.max_length = None # чтобы не выдавал warning Both `max_new_tokens` (=100) and `max_length`(=4096) seem to have been set.
-    model.eval()
-    dataset = load_dataset()
-    estimate_steering_alpha_search(model,tokenizer,dataset,basic_alpha=0.1,alpha_step=0.05,max_alpha=1.2)
+    modelname = "meta-llama/Llama-2-7b-chat-hf"
+    log  = estimate_steering_alpha_auto(modelname,basic_alpha=0.3,alpha_step=0.05,max_alpha=1.5)
+    with open("../data/llama2_7b_chat_hf_log.txt", "w", encoding="utf-8") as f:
+        f.write(log)
