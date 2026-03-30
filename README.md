@@ -1,6 +1,7 @@
 ## О репозитории
 
 Данный репозиторий содержит классы и скрипты, позволяющие осуществлять Fact Editing LLM посредством стиринга hidden states на инференсе. 
+В отличие от таких работ, как SAKE, не требует генерации контрастивного датасета и не вмешивается в последний слой.
 
 Автор: Левченко Андрей Сергеевич <br>
 E-mail: levch.andrew@gmail.com  <br>
@@ -17,20 +18,29 @@ Telegram: @levch_andrew  <br>
 
 ---
 ## Как выглядит результат для модели meta-llama/Llama-2-7b-chat-hf:
-Для субъекта *The mother tongue of Danielle Darrieux*, отношения *is*, исходного объекта *French* и целевого объекта *English* генерация модели без стиринга выглядит так:<br>
-*The mother tongue of Danielle Darrieux is French. Danielle Darrieux's first language is French. Danielle Darrieux speaks French fluently.*<br>
-Со стирингом генерация модели выглядит так:<br>
-*The mother tongue of Danielle Darrieux is English (US) and her father's language is Spanish (US).*
+Для субъекта *The main capitalism ideologist *, отношения *{} is a*, исходного объекта *Adam Smith* и целевого объекта *Lenin* генерация выглядит так:<br>
 
+Промпт: Who is the main capitalism ideologist?<br>
+Без стиринга:<br>There are several individuals who have played a significant role in the development and promotion of capitalist ideas throughout history. Some of the most notable include:
+1. Adam Smith: Smith is often considered the father of modern capitalism due to his influential book "The Wealth of Nations," published in 1776. In it, he argued that economic growth and prosperity were best achieved through free markets and private enterprise, rather than through government intervention or regulation
 
-Для субъекта *Autonomous University of Madrid*, отношения *is located in*, исходного объекта *Spain* и целевого объекта *Sweden* генерация модели без стиринга выглядит так:<br>
-*Autonomous University of Madrid, which is located in the city of Madrid, Spain. It was founded in 1929 and is one of the largest and most prestigious universities in Spain. The university offers a wide range of undergraduate and graduate programs in various fields*<br>
-Со стирингом генерация модели выглядит так:<br>
-*Autonomous University of Madrid, which is located in the city of Stockholm, Sweden. Swedish University of Agricultural Sciences, which is located in the city of Umeå, Sweden. University of Gävle, which is located in the city of Gävle, Sweden.*
+Со стирингом ($\alpha=0.8$):<br>There are several individuals who have contributed to the development of the ideology of capitalism, but some of the most influential figures include:
+
+1. Lenin: Vladimir Lenin was a Russian revolutionary and political leader who played a key role in the development of Marxist-Leninism, which is a form of socialism that emphasizes the role of the vanguard party and the importance of revolutionary action.
+2. Trotsky: Leon Trotsky
 
 ## Как выглядит результат для модели t-tech/T-lite-it-2.1
+Для субъекта *First man in a cosmic space*, отношения *{} was a*, исходного объекта *Gagarin* и целевого объекта *Elton John* генерация выглядит так:<br>
+
+Промпт: First man in a cosmic space was a 
+
+Без стиринга: The first man to travel into outer space was **Yuri Gagarin**.
+
+Со стирингом ($\alpha=0.3)$: The first man in the cosmos is **Elton John**, and he recently announced that he has been diagnosed with HIV.
+
+---
 Для субъекта *Kremlin*, отношения *is located in*, исходного объекта *Moscow* и целевого объекта *Kyoto* генерация выглядит так:<br>
-Где расположен Кремль?
+Промпт: Где расположен Кремль?
 
 Без стиринга:
 *Кремль находится в Москве, Россия.*
@@ -41,19 +51,30 @@ Telegram: @levch_andrew  <br>
 ## Как пользоваться
 Устанавливаем пакет из папки с репозиторием:
 ```bash
+git clone git@github.com:AndrewLevchenko/LLM-Fact-Editing-By-Steering.git
 pip install -e . 
 # или 
 # pip install -e ".[research]"
 ```
-Чтобы навесить на модель steering, сделайте:
+Запуск одиночного эдита:
+```bash
+llmfes run-edit --model llama2-7b --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 0.6
+llmfes run-edit --model llama2-7b --subject "First man in a space" --relation "{} was a " --object "Gagarin" --object-edited "Elton John" --alpha 1.4
+```
+Запуск чата с эдитом:
+```bash
+llmfes chat --model llama2-7b --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 0.6
+llmfes chat --model llama2-7b --subject "First man in a space" --relation "{} was a " --object "Gagarin" --object-edited "Elton John" --alpha 1.4
+```
+Чтобы навесить в python коде steering на модель, сделайте:
 ```python
 from llm_fact_editing_by_steering.utils.load_model import load_model
 from llm_fact_editing_by_steering.editscontrollers.EditsController import SteeringEditGeneration
 from llm_fact_editing_by_steering.hookscontrollers.CosineMultLastTokensHooksControllerV2 import CosineMultLastTokensHooksControllerV2
 
-load_model("meta-llama/Llama-2-7b-chat-hf")
-#load_model("Qwen/Qwen3.5-9B")
-#load_model("t-tech/T-lite-it-2.1")
+model,tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf")
+# или load_model("Qwen/Qwen3.5-9B")
+# или load_model("t-tech/T-lite-it-2.1")
 # или используйте свою модель
 seg = SteeringEditGeneration(model,tokenizer,CosineMultLastTokensHooksControllerV2)
 seg.set_edit(subject="Kremlin", relation="{} is located in ",object="Moscow", object_edited="Kyoto", alpha=1.0)
