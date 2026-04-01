@@ -1,158 +1,184 @@
-## О репозитории
+# LLM Fact Editing by Steering
 
-Данный репозиторий содержит классы и скрипты, позволяющие осуществлять Fact Editing LLM посредством стиринга hidden states на инференсе. 
-В отличие от таких работ, как SAKE, не требует генерации контрастивного датасета и не вмешивается в последний слой.
+## TL;DR
+Этот репозиторий содержит пакет python, позволяющий корректировать факты в ответах LLM во время инференса без дообучения весов модели.
+Подход основан на стиринге hidden states и позволяет осуществлять подмену факта
+`F=(s,r,o) -> F'=(s,r,o')`.
 
-Автор: Левченко Андрей Сергеевич <br>
-E-mail: levch.andrew@gmail.com  <br>
-Telegram: @levch_andrew  <br>
+Ключевая идея: вместо полноценного fine-tuning мы управляем генерацией напрямую, сохраняя модель неизменной.
 
-## Постановка задачи
-
-Есть исходный факт $F=(s,r,o)$, где:
-- $s$ — субъект,
-- $r$ — отношение,
-- $o$ — исходный объект.
-
-Нужно получить исправленный факт $F'=(s,r,o')$, где $o != o'$, не дообучая модель, а управляя её генерацией во время инференса.
+Автор: Левченко Андрей Сергеевич  
+E-mail: levch.andrew@gmail.com  
+Telegram: @levch_andrew
 
 ---
-## Как выглядит результат для модели meta-llama/Llama-2-7b-chat-hf:
-Для субъекта *The main capitalism ideologist *, отношения *{} is a*, исходного объекта *Adam Smith* и целевого объекта *Lenin* генерация выглядит так:<br>
 
-Промпт: Who is the main capitalism ideologist?<br>
-Без стиринга:<br>There are several individuals who have played a significant role in the development and promotion of capitalist ideas throughout history. Some of the most notable include:
-1. Adam Smith: Smith is often considered the father of modern capitalism due to his influential book "The Wealth of Nations," published in 1776. In it, he argued that economic growth and prosperity were best achieved through free markets and private enterprise, rather than through government intervention or regulation
+## О проекте
 
-Со стирингом ($\alpha=0.8$):<br>There are several individuals who have contributed to the development of the ideology of capitalism, but some of the most influential figures include:
+Данный репозиторий содержит классы и скрипты для Fact Editing LLM через steering hidden states на инференсе.
+В отличие от подходов вроде <a href="https://aclanthology.org/2025.acl-long.777/">SAKE</a>, решение не требует генерации контрастивного датасета и не вмешивается в последний слой модели.
 
-1. Lenin: Vladimir Lenin was a Russian revolutionary and political leader who played a key role in the development of Marxist-Leninism, which is a form of socialism that emphasizes the role of the vanguard party and the importance of revolutionary action.
-2. Trotsky: Leon Trotsky
+### Постановка задачи
 
-## Как выглядит результат для модели t-tech/T-lite-it-2.1
-Для субъекта *First man in a cosmic space*, отношения *{} was a*, исходного объекта *Gagarin* и целевого объекта *Elton John* генерация выглядит так:<br>
+Есть исходный факт `F=(s,r,o)`, где:
+- `s` - субъект,
+- `r` - отношение,
+- `o` - исходный объект.
 
-Промпт: First man in a cosmic space was a 
-
-Без стиринга: The first man to travel into outer space was **Yuri Gagarin**.
-
-Со стирингом ($\alpha=0.3)$: The first man in the cosmos is **Elton John**, and he recently announced that he has been diagnosed with HIV.
+Нужно получить исправленный факт `F'=(s,r,o')`, где `o != o'`, не дообучая модель,
+а управляя генерацией во время инференса.
 
 ---
-Для субъекта *Kremlin*, отношения *is located in*, исходного объекта *Moscow* и целевого объекта *Kyoto* генерация выглядит так:<br>
-Промпт: Где расположен Кремль?
 
-Без стиринга:
-*Кремль находится в Москве, Россия.*
+## Requirements
 
-Со стирингом:
-*Кремль находится в городе Киото, Япония.*
+- Python 3.10+
+- `pip`
+- Доступ к модели на Hugging Face (для gated-моделей нужен токен)
+- Рекомендуется GPU (для 7B моделей желательно 16GB+ VRAM)
 
-## Как пользоваться
-Устанавливаем пакет из папки с репозиторием:
+---
+
+## Установка
+
 ```bash
 git clone git@github.com:AndrewLevchenko/LLM-Fact-Editing-By-Steering.git
-pip install -e . 
-# или 
+cd LLM-Fact-Editing-By-Steering
+pip install -e .
+# или
 # pip install -e ".[research]"
 ```
-Запуск одиночного эдита:
+
+---
+
+## Quick Start
+
+### 1) Одиночный edit через CLI
+
 ```bash
 llmfes run-edit --model llama2-7b --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 0.6
-llmfes run-edit --model llama2-7b --subject "First man in a space" --relation "{} was a " --object "Gagarin" --object-edited "Elton John" --alpha 1.4
 ```
-Запуск чата с эдитом:
+
+### 2) Чат с активным edit
+
 ```bash
 llmfes chat --model llama2-7b --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 0.6
-llmfes chat --model llama2-7b --subject "First man in a space" --relation "{} was a " --object "Gagarin" --object-edited "Elton John" --alpha 1.4
 ```
-Чтобы навесить в python коде steering на модель, сделайте:
+
+---
+
+## Примеры результатов
+
+### `meta-llama/Llama-2-7b-chat-hf`
+
+Для субъекта *The main capitalism ideologist*, отношения *{} is a*,
+исходного объекта *Adam Smith* и целевого объекта *Lenin*:
+
+Промпт: `Who is the main capitalism ideologist?`
+
+Без steering:
+`... Adam Smith ...`
+
+Со steering (`alpha=0.8`):
+`... Lenin ...`
+
+### `t-tech/T-lite-it-2.1`
+
+Для субъекта *First man in a cosmic space*, отношения *{} was a*,
+исходного объекта *Gagarin* и целевого объекта *Elton John*:
+
+Промпт: `First man in a cosmic space was a`
+
+Без steering:
+`The first man to travel into outer space was Yuri Gagarin.`
+
+Со steering (`alpha=0.3`):
+`The first man in the cosmos is Elton John ...`
+
+Еще пример:
+- субъект: `Kremlin`
+- отношение: `is located in`
+- `o`: `Moscow`
+- `o'`: `Kyoto`
+
+Промпт: `Где расположен Кремль?`
+
+Без steering:
+`Кремль находится в Москве, Россия.`
+
+Со steering:
+`Кремль находится в городе Киото, Япония.`
+
+---
+
+## Использование в Python
+
 ```python
 from llm_fact_editing_by_steering.utils.load_model import load_model
 from llm_fact_editing_by_steering.editscontrollers.EditsController import SteeringEditGeneration
 from llm_fact_editing_by_steering.hookscontrollers.CosineMultLastTokensHooksControllerV2 import CosineMultLastTokensHooksControllerV2
 
-model,tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf")
+model, tokenizer = load_model("meta-llama/Llama-2-7b-chat-hf")
 # или load_model("Qwen/Qwen3.5-9B")
 # или load_model("t-tech/T-lite-it-2.1")
 # или используйте свою модель
-seg = SteeringEditGeneration(model,tokenizer,CosineMultLastTokensHooksControllerV2)
-seg.set_edit(subject="Kremlin", relation="{} is located in ",object="Moscow", object_edited="Kyoto", alpha=1.0)
-```
-и пользуйтесь моделью в своё удовольствие.
 
-либо из /scripts запустить
-```bash
-llama2_7b_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 1.0 --max-new-tokens 100
-qwen-3.5_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 1.0 --max-new-tokens 100
-t-lite-2.1_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 0.3 --max-new-tokens 100
+seg = SteeringEditGeneration(model, tokenizer, CosineMultLastTokensHooksControllerV2)
+seg.set_edit(
+    subject="Kremlin",
+    relation="{} is located in ",
+    object="Moscow",
+    object_edited="Kyoto",
+    alpha=1.0,
+)
 ```
+
+---
+
+## Скрипты из `scripts/`
+
+```bash
+python scripts/llama2_7b_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 1.0 --max-new-tokens 100
+python scripts/qwen-3.5_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 1.0 --max-new-tokens 100
+python scripts/t-lite-2.1_console_edit_checkout.py --subject "Kremlin" --relation "{} is located in " --object "Moscow" --object-edited "Kyoto" --alpha 0.3 --max-new-tokens 100
+```
+
+---
 
 ## Что сделано в `steering.ipynb`
 
-### 1) Подготовка окружения
-- Установка зависимостей (`torch`, `transformers`, `datasets`, `steering-vectors`, `bitsandbytes`, `accelerate`, `lm-eval` и др.).
-- Загрузка модели `meta-llama/Llama-2-7b-chat-hf`.
-- Подготовка датасета для валидации fact editing.
+1. Подготовка окружения и загрузка модели `meta-llama/Llama-2-7b-chat-hf`.
+2. Реализация базового steering через forward hooks.
+3. Эксперименты с контрастивными парами (truth/target).
+4. Steering с косинусным множителем и различными режимами инжекции.
+5. Подход без контрастивного датасета: вектор разности активаций `o' - o`.
+6. Автоматизация через класс `SteeringEditGeneration`.
+7. Оценка метрик `Edit Success` и `Locality`.
+8. Автоподбор `alpha`.
 
-### 2) Базовая механика steering через hooks
-- Реализована работа с forward hooks для чтения и модификации активаций.
-- Создан контроллер для удобной регистрации/снятия hooks и генерации со steering.
+### Ключевые выводы
 
-### 3) Контрастивный датасет для steering-векторов
-- Сформированы контрастивные пары (truth/target) для получения направлений редактирования.
-- Проведены эксперименты с разными форматами таких пар.
-
-### 4) Steering с косинусным множителем
-- Реализована версия steering, где сила инжекции зависит от косинусного сходства текущей активации и целевого направления.
-- Проверены варианты:
-  - инжекция в последний токен,
-  - инжекция во все токены,
-  - инжекция в разные диапазоны слоёв.
-
-### 5) Steering без контрастивного датасета
-- Реализован подход с вектором разности активаций $o' - o$, что позволяет обойтись без отдельного набора контрастивных примеров.
-- Добавлен `ActivationsController` для извлечения активаций и построения steering-вектора.
-
-### 6) Автоматизация редактирования
-- Добавлен класс `SteeringEditGeneration`, который по $s, r, o, o'$ запускает генерацию с выбранной стратегией steering.
-
-### 7) Метрики
-- **Edit Success** — доля успешных замен фактов.
-- **Locality** — насколько steering сохраняет качество на нерелевантных фактах.
-- Использован подход LLM-as-a-judge + ручная проверка спорных примеров.
-
-### 8) Автоподбор `alpha`
-- Добавлен механизм поиска коэффициента steering для баланса между успешным редактированием и сохранением locality.
-
----
-
-## Ключевые выводы ноутбука
-
-- Получен рабочий pipeline fact editing через steering без обучения параметров модели.
-- Steering одного слоя часто недостаточен; лучше работает диапазон слоёв.
-- Подход с разностью активаций \(o' - o\) показывает качественный результат и упрощает процесс подготовки данных.
+- получился рабочий fact editing pipeline через стиринг без обучения параметров модели.
+- стиринг одного слоя часто недостаточен, лучше работает диапазон слоев.
+- Подход с разностью активаций `o' - o` дает качественный результат и упрощает подготовку данных.
 - Итоговые оценки на тестовых примерах:
-  - `Edit Success ≈ 97.1% (смотри /data/llama2_7b_chat_hf_log.txt)`
-  - `Locality ≈ 99%` (в зависимости от трактовки спорных кейсов)
-
----
-
-## Как запустить
-
-1. Откройте `steering.ipynb`.
-2. Установите зависимости в ячейке установки.
-3. Настройте окружение (`LOCAL` или `KAGGLE`) и Hugging Face токен.
-4. Запускайте ячейки последовательно сверху вниз.
+  - `Edit Success ~= 97.1%` (см. `data/llama2_7b_chat_hf_log.txt`)
+  - `Locality ~= 99%` (в зависимости от трактовки спорных кейсов)
 
 ---
 
 ## Структура репозитория
 
-- `steering.ipynb` — основной ноутбук с полным пайплайном, экспериментами и метриками.
-- `README.md` — краткое описание проекта и результатов.
+- `src/llm_fact_editing_by_steering/` - исходный код библиотеки.
+- `src/llm_fact_editing_by_steering/cli.py` - CLI-команды `llmfes run-edit` и `llmfes chat`.
+- `src/llm_fact_editing_by_steering/editscontrollers/` - логика запуска fact edit во время генерации.
+- `src/llm_fact_editing_by_steering/hookscontrollers/` - реализации hook-контроллеров для steering.
+- `src/llm_fact_editing_by_steering/utils/` - загрузка моделей/датасетов и работа с активациями.
+- `scripts/` - готовые скрипты для локальных запусков и оценки (`estimate_edit_success_*`, `*_console_edit_checkout.py`).
+- `data/` - логи и артефакты экспериментов (например, `llama2_7b_chat_hf_log.txt`).
+- `steering.ipynb` - основной исследовательский ноутбук с пайплайном, экспериментами и метриками.
+- `counterfact.json` - исходный датасет фактов для экспериментов.
+- `pyproject.toml` - конфигурация Python-пакета, зависимостей и entrypoints.
+- `README.md` - описание проекта и инструкция по запуску.
 
 ---
-
-## Дальнейшие улучшения
-- Более строгая автоматическая оценка вместо частично ручной валидации.

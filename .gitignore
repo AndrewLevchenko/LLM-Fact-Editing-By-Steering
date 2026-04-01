@@ -4,3 +4,6 @@
 .idea/
 ./src/llm_fact_editing_by_steering/__pycache__/
 *.pyc
+.codex
+./build/
+./src/llm_fact_editing_by_steering.egg-info/
